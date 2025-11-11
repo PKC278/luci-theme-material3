@@ -1,0 +1,56 @@
+name: release-packages
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version (e.g. v1.0.0)'
+        required: true
+        type: string
+
+jobs:
+  build:
+    name: Build packages
+    uses: ./.github/workflows/build-packages.yml
+
+  release:
+    name: Create release
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    
+    steps:
+      - name: Download openwrt-24.10 artifacts
+        uses: actions/download-artifact@v5
+        with:
+          name: openwrt-24.10-packages
+          path: openwrt-24.10-packages
+
+      - name: Download SNAPSHOT artifacts
+        uses: actions/download-artifact@v5
+        with:
+          name: SNAPSHOT-packages
+          path: SNAPSHOT-packages
+
+      - name: Display downloaded files
+        run: |
+          echo "=== openwrt-24.10 packages ==="
+          ls -lh openwrt-24.10-packages/ || echo "No files found"
+          echo ""
+          echo "=== SNAPSHOT packages ==="
+          ls -lh SNAPSHOT-packages/ || echo "No files found"
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ inputs.version }}
+          name: Release ${{ inputs.version }}
+          draft: false
+          prerelease: false
+          generate_release_notes: true
+          files: |
+            openwrt-24.10-packages/*.ipk
+            openwrt-24.10-packages/*.apk
+            SNAPSHOT-packages/*.ipk
+            SNAPSHOT-packages/*.apk
